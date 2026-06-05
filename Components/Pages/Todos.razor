@@ -1,0 +1,86 @@
+@page "/todos-ui"
+@rendermode InteractiveServer
+@inject ITaskService TaskService
+
+<h1>Todos</h1>
+
+<div>
+    <input @bind="newName" placeholder="Todo name" />
+
+    <input type="date" @bind="newDueDate" />
+
+    <button @onclick="AddTodo">Add</button>
+</div>
+
+@if (!string.IsNullOrWhiteSpace(errorMessage))
+{
+    <p style="color: red">@errorMessage</p>
+}
+
+<ul>
+    @foreach (var todo in todos)
+    {
+        <li>
+            <strong>@todo.Name</strong>
+            - due @todo.DueDate.ToShortDateString()
+            - @(todo.IsCompleted ? "Done" : "Not done")
+
+            <button @onclick="() => MarkTodoCompleted(todo.Id)">Mark Complete</button>
+            <button @onclick="() => DeleteTodo(todo.Id)">Delete</button>
+        </li>
+    }
+</ul>
+
+@code {
+    private List<Todo> todos = new();
+
+    private string newName = "";
+    private DateTime newDueDate = DateTime.Today.AddDays(1);
+    private string? errorMessage;
+
+    protected override void OnInitialized()
+    {
+        LoadTodos();
+    }
+
+    private void LoadTodos()
+    {
+        todos = TaskService.GetTodos();
+    }
+
+    private void AddTodo()
+    {
+        errorMessage = null;
+
+        if (newDueDate < DateTime.Today)
+        {
+            errorMessage = "Due date cannot be in the past.";
+            return;
+        }
+
+        var nextId = todos.Count == 0 ? 1 : todos.Max(t => t.Id) + 1;
+
+        TaskService.AddTodo(new Todo(
+            nextId,
+            newName,
+            newDueDate,
+            false
+        ));
+
+        newName = "";
+        newDueDate = DateTime.Today.AddDays(1);
+
+        LoadTodos();
+    }
+
+    private void DeleteTodo(int id)
+    {
+        TaskService.DeleteTodoById(id);
+        LoadTodos();
+    }
+
+    private void MarkTodoCompleted(int id){
+        TaskService.MarkComplete(id);
+        LoadTodos();
+    }
+}
